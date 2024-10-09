@@ -65,3 +65,17 @@ username = API_WUFOO
 password_wufoo = random_key
 
 WUFOO_AUTH_TUPLE=(username, password_wufoo)
+
+
+def custom_url_open(full_url: str, auth: tuple = None) -> requests.models.Response:
+    try:
+        if auth:
+            response = requests.get(full_url, auth=auth)
+        else:
+            response = requests.get(full_url)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print("Request Exception:", e)
+        sys.exit(1)
+
