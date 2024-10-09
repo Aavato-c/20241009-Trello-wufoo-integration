@@ -156,7 +156,7 @@ def post_custom_formatted_card_to_trello(data: dict, trello_key: str = API_TRELL
         description = base_description + field_conditional_description
 
         if DEBUG:
-            logger.info(f"Debug mode on. Normally would post the following card to Trello.")
+            logger.info(f"Debug mode on. Normally would post card {entrie['EntryId']} to Trello.")
         
         if not DEBUG:
             post_card_to_trello_list(
