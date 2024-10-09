@@ -275,3 +275,68 @@ def post_card_to_trello_list(
             logger.error(f"Something went wrong when making a POST to trello.")
         else:
             logger.error(f"Something went wrong when making a POST to trello: {e}")
+
+
+def main():
+    if os.path.exists(ENTRY_ID_FILE):
+        with open(ENTRY_ID_FILE, 'r') as f:
+            latest_entry_id = int(f.read())
+            f.close()
+    else:
+        latest_entry_id = input(f"Couldn't find the latest entry id from {ENTRY_ID_FILE}.\nPlease enter the latest entry id form wufoo after which the forms should be fetched (excluding the entry id).\nEntry id after which to fetch: ", end="")
+
+    try:
+        fetched_data = {"Entries": []}
+        logger.info("Fetching data from Wufoo.")
+        
+        lowest_entry_id_from_data = None
+        
+        additional_max_clause = ""
+        while True:
+            url = f"forms/{WUFOO_FORM_HASH}/entries.json?Filter1=EntryId+Is_greater_than+{latest_entry_id}{additional_max_clause}&sort=EntryId&sortDirection=DESC"
+            response_data = custom_url_open(WUFOO_BASE_URL + url, WUFOO_AUTH_TUPLE)
+            
+            for entry in response_data['Entries']:
+                fetched_data['Entries'].append(entry)
+            try:
+                lowest_entry_id_from_data = int(response_data['Entries'][-1]['EntryId'])
+            except:
+                logger.info("No more entries to fetch.")
+            
+            if lowest_entry_id_from_data <= latest_entry_id + 1:
+                logger.debug(f"No more entries to fetch, lowest entry id from data: {lowest_entry_id_from_data}")
+                break
+            else:
+                additional_max_clause = f"&Filter2=EntryId+Is_less_than+{lowest_entry_id_from_data}"
+            
+        logger.info("Fetched data from Wufoo.")
+
+    except Exception as e:
+        logger.error(f"There was a problem getting entrie data from Wufoo. Error: {e}")
+        exit(1)
+
+    try:
+        fetched_data['Entries'][0]['EntryId']
+    except IndexError:
+        logger.warning("There were no new entries in the Wufoo form. Exiting.")
+        exit()
+
+    try:
+        post_custom_formatted_card_to_trello(fetched_data, API_TRELLO, TOKEN_TRELLO, LIST_ID_TRELLO)
+    except Exception as e:
+        if GDPR_CAUTION:
+            logger.error(f"Something went wrong when posting the card to Trello. Not printing the error message due to GDPR_CAUTION.")
+        else
+        logger.warning(f"Something went wrong when posting the card to Trello. {e}")
+        exit()
+
+    with open(ENTRY_ID_FILE, 'w') as f:
+        if not DEBUG:
+            f.write(fetched_data['Entries'][0]['EntryId']) # Write the latest entry id to the file
+            f.close()
+        else:
+            logger.info(f"Debug mode on. Normally would write the latest entry id {fetched_data['Entries'][0]['EntryId']} to the file.")
+            f.close()
+
+if __name__ == "__main__":
+    main()
