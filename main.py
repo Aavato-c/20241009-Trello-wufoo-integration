@@ -352,9 +352,8 @@ def main():
     except Exception as e:
         if GDPR_CAUTION:
             logger.error(f"Something went wrong when posting the card to Trello. Not printing the error message due to GDPR_CAUTION.")
-        else
-        logger.warning(f"Something went wrong when posting the card to Trello. {e}")
-        exit()
+        else:
+            logger.warning(f"Something went wrong when posting the card to Trello. {e}")
 
     with open(ENTRY_ID_FILE, 'w') as f:
         if not DEBUG:
