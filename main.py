@@ -147,19 +147,21 @@ def post_card_to_trello_list(
         pos: str = "top") -> bool:
     
     """
-        Posts a card to the Trello list. Check the Trello API documentation for more information on the parameters.
+    Posts a card to the Trello list. Check the Trello API documentation for more information on the parameters.
+    ### Args
+        - name (str): The name of the card.
+        - desc (str): The description of the card.
+        - due (datetime): The due date of the card.
+        - start (datetime): The start date of the card.
+        - idList (str): The id of the list where the card should be posted.
+        - key (str): The Trello API key.
+        - token (str): The Trello API token.
+        - pos (str): The position of the card in the list.
 
-    Args:
-        name (str): The name of the card.
-        desc (str): The description of the card.
-        due (datetime): The due date of the card.
-        start (datetime): The start date of the card.
-        idList (str): The id of the list where the card should be posted.
-        key (str): The Trello API key.
-        token (str): The Trello API token.
-        pos (str): The position of the card in the list.
-        
+    ### Returns
+        - bool: True if the card was posted succesfully, False / Exception otherwise.
     """
+    
     try:
         query = {
             "name": name,
