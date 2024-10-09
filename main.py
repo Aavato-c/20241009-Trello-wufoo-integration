@@ -12,6 +12,8 @@ import dotenv
 from utils.logging_utils import logger
 
 DEBUG = True
+GDPR_CAUTION = True
+
 CURRENT_DIR = pathlib.Path(__file__).parent.absolute()
 DOWNLOAD_FOLDER = "attachments"
 PARSED_DOWNLOAD_FOLDER = CURRENT_DIR / DOWNLOAD_FOLDER
@@ -269,5 +271,7 @@ def post_card_to_trello_list(
         logger.info("Posted a card to Trello.")
         return True
     except Exception as e:
-        logger.error(f"Something went wrong when making a POST to trello: {e}")
-        raise Exception(f"Something went wrong when making a POST to trello. Error: {e}")
+        if GDPR_CAUTION:
+            logger.error(f"Something went wrong when making a POST to trello.")
+        else:
+            logger.error(f"Something went wrong when making a POST to trello: {e}")
