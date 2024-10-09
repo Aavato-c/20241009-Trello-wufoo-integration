@@ -135,3 +135,48 @@ def download_entrie_files_to_folder(entrie: dict, description: str, fields_for_a
         f.close()
 
     return True
+
+def post_card_to_trello_list(
+        name: str,
+        desc: str,
+        due: datetime,
+        start: datetime,
+        idList: str = LIST_ID_TRELLO,
+        key: str = API_TRELLO,
+        token: str = TOKEN_TRELLO,
+        pos: str = "top") -> bool:
+    
+    """
+        Posts a card to the Trello list. Check the Trello API documentation for more information on the parameters.
+
+    Args:
+        name (str): The name of the card.
+        desc (str): The description of the card.
+        due (datetime): The due date of the card.
+        start (datetime): The start date of the card.
+        idList (str): The id of the list where the card should be posted.
+        key (str): The Trello API key.
+        token (str): The Trello API token.
+        pos (str): The position of the card in the list.
+        
+    """
+    try:
+        query = {
+            "name": name,
+            "pos": pos,
+            "desc": desc,
+            "due": due,
+            "start": start,
+            "idList": idList,
+            "key": key,
+            "token": token
+            }
+        
+        reponse = requests.request("POST", TRELLO_BASE_URL, params=query)
+        reponse.raise_for_status() # Raise an exception for HTTP errors
+        
+        logger.info("Posted a card to Trello.")
+        return True
+    except Exception as e:
+        logger.error(f"Something went wrong when making a POST to trello: {e}")
+        raise Exception(f"Something went wrong when making a POST to trello. Error: {e}")
