@@ -37,8 +37,21 @@ EXPECTED_ENV_VARS = [
     "WUFOO_FORM_HASH",
     "WUFOO_BASE_URL",
     "TRELLO_BASE_URL",
-    "ENTRY_ID_FILE"
+    "ENTRY_ID_FILE",
 ]
+
+POSTED_CARDS_LOG = "cards_posted.txt"
+CARDS_POSTED = []
+if os.path.exists(POSTED_CARDS_LOG):
+    with open(POSTED_CARDS_LOG, 'r') as f:
+        CARDS_POSTED = f.read().split(":")
+        f.close()
+        
+        
+else :
+    with open(POSTED_CARDS_LOG, 'w') as f:
+        f.write("THIS_IS_A_PLACEHOLDER:THIS_TOO_IS_A_PLACEHOLDER") # Placeholder to avoid empty file, stupid I know.
+        f.close()
 
 for var in EXPECTED_ENV_VARS:
     if var not in os.environ:
@@ -112,8 +125,9 @@ def post_custom_formatted_card_to_trello(data: dict, trello_key: str = API_TRELL
         # We'll parse the data from the Wufoo form to a long string that will be the description of the Trello card.
         # This is a custom format that works for us, but you can modify it to your needs.
 
-        date_time_now_str = datetime.now().strftime("%d.%m.%Y klo %H:%M:%S")
+        card_id = entrie['EntryId']
         
+        date_time_now_str = datetime.now().strftime("%d.%m.%Y klo %H:%M:%S")
         date_time_entrie_creation_date = datetime.strptime(entrie['DateCreated'], '%Y-%m-%d %H:%M:%S')  # Convert the date string from the form to a datetime object
         date_time_entrie_creation_date_str = date_time_entrie_creation_date.strftime("%d.%m.%Y klo %H:%M:%S")  # reformat datetime object to string
         deadline_in_half_a_year = date_time_entrie_creation_date + timedelta(weeks=26)  # Use the datetime object to calculate the due date after half a year
@@ -150,6 +164,7 @@ def post_custom_formatted_card_to_trello(data: dict, trello_key: str = API_TRELL
             pos = "top",
             desc = description,
             due = deadline_in_half_a_year,
+            card_id=card_id,
             start = date_time_entrie_creation_date,
             idList = list_id_trello,
             key = trello_key,
@@ -233,6 +248,7 @@ def post_card_to_trello_list(
         due: datetime,
         start: datetime,
         idList: str = LIST_ID_TRELLO,
+        card_id: str = None,
         key: str = API_TRELLO,
         token: str = TOKEN_TRELLO,
         pos: str = "top") -> bool:
@@ -265,10 +281,20 @@ def post_card_to_trello_list(
             "token": token
             }
         
-        reponse = requests.request("POST", TRELLO_BASE_URL, params=query)
-        reponse.raise_for_status() # Raise an exception for HTTP errors
+        if card_id in CARDS_POSTED:
+            reponse = requests.request("POST", TRELLO_BASE_URL, params=query)
+            reponse.raise_for_status() # Raise an exception for HTTP errors
+        else:
+            logger.info(f"Card {name} has already been posted. Skipping.")
+            return False
         
         logger.info("Posted a card to Trello.")
+        POSTED_CARDS_LOG.append(card_id)
+        with open(POSTED_CARDS_LOG, "w") as f:
+            f.write(POSTED_CARDS_LOG.join(":"))
+            f.close()
+
+
         return True
     except Exception as e:
         if GDPR_CAUTION:
