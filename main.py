@@ -1,6 +1,3 @@
-import json
-import logging
-import logging.handlers
 import os
 import sys
 import traceback
@@ -8,8 +5,7 @@ from datetime import datetime, timedelta
 import requests
 import secrets
 import time
-import hashlib
-import crypt 
+
 import pathlib
 import dotenv
 
