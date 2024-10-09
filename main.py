@@ -76,6 +76,95 @@ def custom_url_open(full_url: str, auth: tuple = None) -> requests.models.Respon
         sys.exit(1)
 
 
+def post_custom_formatted_card_to_trello(data: dict, trello_key: str = API_TRELLO, trello_token: str = TOKEN_TRELLO, list_id_trello: str = LIST_ID_TRELLO) -> bool:
+    """
+    Posts a card to the Trello list with the data from the Wufoo form.
+
+    ### Args:
+        - data (dict): The data from the Wufoo form.
+        - trello_key (str): The Trello API key.
+        - trello_token (str): The Trello API token.
+        - list_id_trello (str): The id of the list where the card should be posted.
+
+    ### Returns:
+        - bool: True if the card was posted succesfully, False otherwise.
+
+    """
+    
+    # We'll get the current fields from the form to get the field names. 
+    # Wufoo doesn't store the field names if the form has been edited, 
+    # so we'll just use the field ids then.
+    form_data = custom_url_open(WUFOO_BASE_URL + 'forms.json', WUFOO_AUTH_TUPLE)
+    link_to_fields = form_data['Forms'][0]['LinkFields']
+    
+    field_data = custom_url_open(link_to_fields, WUFOO_AUTH_TUPLE)
+    field_data = field_data['Fields']
+    
+    
+    fields_grouped_by_id = {}
+    for field in field_data:
+        fields_grouped_by_id[field['ID']] = field['Title']
+    
+    entrie: dict
+    for entrie in data['Entries']:
+        # We'll parse the data from the Wufoo form to a long string that will be the description of the Trello card.
+        # This is a custom format that works for us, but you can modify it to your needs.
+
+        date_time_now_str = datetime.now().strftime("%d.%m.%Y klo %H:%M:%S")
+        
+        date_time_entrie_creation_date = datetime.strptime(entrie['DateCreated'], '%Y-%m-%d %H:%M:%S')  # Convert the date string from the form to a datetime object
+        date_time_entrie_creation_date_str = date_time_entrie_creation_date.strftime("%d.%m.%Y klo %H:%M:%S")  # reformat datetime object to string
+        deadline_in_half_a_year = date_time_entrie_creation_date + timedelta(weeks=26)  # Use the datetime object to calculate the due date after half a year
+        
+        base_description = (
+            f"""Arrived: {date_time_entrie_creation_date_str}\n\n"""
+            f"""_NB. This submission has automatically been created in Trello on {date_time_now_str}._\n\n\n\n"""
+            )
+        
+        
+        field_conditional_description = ""
+        for field in entrie.keys():
+            if field == "EntryId":
+                field_conditional_description += f"Form entry id: {entrie[field]}\n\n"
+                continue
+            if entrie[field] == '' or entrie[field] == None:
+                continue
+            try:
+                field_conditional_description += f"**{fields_grouped_by_id[field]}**\n{entrie[field]}\n\n"
+            except:
+                field_conditional_description += f"**{field}**\n{entrie[field]}\n\n"
+                continue
+            
+        name_for_the_card = f"{entrie['Field14']} ({entrie['Field1']})" # In our case, we'll use the name of the submitted product and the name of the submitter as the name of the card.
+    
+        description = base_description + field_conditional_description
+
+        if DEBUG:
+            logger.info(f"Debug mode on. Normally would post the following card to Trello.")
+        
+        if not DEBUG:
+            post_card_to_trello_list(
+            name = name_for_the_card,
+            pos = "top",
+            desc = description,
+            due = deadline_in_half_a_year,
+            start = date_time_entrie_creation_date,
+            idList = list_id_trello,
+            key = trello_key,
+            token = trello_token
+            )
+            
+        try:
+            if not DEBUG:
+                download_entrie_files_to_folder(entrie, description)
+                logger.info(f"Downloaded files for entrie {entrie['EntryId']}")
+            if DEBUG:
+                logger.info(f"Debug mode on. Normally would download the files for entrie {entrie['EntryId']}")
+        except:
+            logger.error('Something went wrong when downloading the files from Wufoo.')
+            
+    return True
+
 def download_entrie_files_to_folder(entrie: dict, description: str, fields_for_attachments: list) -> bool:
     """
     Downloads the files from the entries to the folder.
